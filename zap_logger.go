@@ -35,9 +35,6 @@ func NewZapLogger(options ...func(*ZapLogger) error) *ZapLogger {
 	if logger.ctx == nil {
 		logger.ctx = context.Background()
 	}
-	// if logger.writeStdErr == nil || logger.writeStdOut == nil {
-	// 	logger.Configs.Storage.LoggerStorage = Default
-	// }
 	if len(logger.Configs.App.PublicIP) == 0 {
 		logger.Configs.App.PublicIP = "localhost"
 	}
@@ -79,9 +76,6 @@ func (l *ZapLogger) Connect() {
 
 	consoleDebugging := zapcore.AddSync(os.Stderr)
 	consoleErrors := zapcore.AddSync(os.Stdout)
-
-	//consoleDebugging := zapcore.Lock(os.Stdout)
-	//consoleErrors := zapcore.Lock(os.Stderr)
 
 	if l.Configs.Storage.LoggerStorage == Default {
 		if l.Configs.Encoder == Console {
@@ -170,17 +164,6 @@ func SetConfigs(conf *Configs) func(*ZapLogger) error {
 func SetContext(ctx context.Context) func(*ZapLogger) error {
 	return func(logger *ZapLogger) error {
 		logger.ctx = ctx
-		return nil
-	}
-}
-
-func SetWriters(writers ...*io.PipeWriter) func(*ZapLogger) error {
-	return func(logger *ZapLogger) error {
-		if writers == nil || len(writers) < 2 {
-			log.Fatal("invalid count of io.Write streams for log data synchronization", string(debug.Stack()))
-		}
-		logger.writeStdOut = writers[0]
-		logger.writeStdErr = writers[1]
 		return nil
 	}
 }

@@ -65,14 +65,14 @@ func (s *SyncLogsService) RunLogsLoops() {
 
 func (s *SyncLogsService) stdOutReadLoop() {
 	go func() {
-		// defer func() {
-		// 	r := recover()
-		// 	if err, ok := r.(error); ok {
-		// 		s.logger.ErrorService(&ServiceLog{
-		// 			Error: err.Error(),
-		// 		})
-		// 	}
-		// }()
+		defer func() {
+			r := recover()
+			if err, ok := r.(error); ok {
+				s.logger.ErrorService(&ServiceLog{
+					Error: err.Error(),
+				})
+			}
+		}()
 		dec := json.NewDecoder(s.readerStd)
 		var tmpLog ServiceLog
 		var endpointLog EndpointLog
@@ -123,14 +123,14 @@ func (s *SyncLogsService) decodeEndpointLogHelper(dec *json.Decoder, endpointLog
 
 func (s *SyncLogsService) stdErrReadLoop() {
 	go func() {
-		// defer func() {
-		// 	r := recover()
-		// 	if err, ok := r.(error); ok {
-		// 		s.logger.ErrorService(&ServiceLog{
-		// 			Error: err.Error(),
-		// 		})
-		// 	}
-		// }()
+		defer func() {
+			r := recover()
+			if err, ok := r.(error); ok {
+				s.logger.ErrorService(&ServiceLog{
+					Error: err.Error(),
+				})
+			}
+		}()
 		dec := json.NewDecoder(s.readerErr)
 		var tmpLog ServiceLog
 		var endpointLog EndpointLog

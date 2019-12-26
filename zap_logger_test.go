@@ -2,14 +2,11 @@ package zap_custom_logger
 
 import (
 	"context"
-	"io"
 	"testing"
 	"time"
 )
 
 func TestConnect(t *testing.T) {
-	readStdErr, writeStdErr := io.Pipe()
-	readStdOut, writeStdOut := io.Pipe()
 	ctx, cancel := context.WithCancel(context.Background())
 	log := NewZapLogger(
 		SetConfigs(&Configs{
@@ -22,17 +19,11 @@ func TestConnect(t *testing.T) {
 			},
 			Encoder: Console,
 		}),
-		SetWriters(writeStdOut, writeStdErr),
 		SetContext(context.Background()),
 	)
 	log.Connect()
-	syncService := NewSyncLogsService(ctx, log, readStdOut, readStdErr)
-	syncService.RunLogsLoops()
-	log.ErrorEndpoint(&EndpointLog{
-		Error: String("djbvdvbbvrfkvbruv"),
-	})
 	defer func() {
-		syncService.Close()
+		log.Close()
 		cancel()
 	}()
 	go func() {
