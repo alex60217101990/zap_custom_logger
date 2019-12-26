@@ -1,4 +1,4 @@
-module github.com/alex6021710/zap_custom_logger
+module github.com/alex60217101990/zap_custom_logger
 
 go 1.13
 
