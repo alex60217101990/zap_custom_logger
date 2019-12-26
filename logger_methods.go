@@ -6,8 +6,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func (l *ZapLogger) encodeEndpointLogForConsole(log *EndpointLog) []zap.Field {
+func (l *ZapLogger) encodeEndpointLogForConsole(methodLevel *string, log *EndpointLog) []zap.Field {
 	return []zap.Field{
+		zap.String("level", *l.getLevel(methodLevel, &log.Level)),
 		zap.String("url", StringPtr(log.Url)),
 		zap.Any("error", log.Error),
 		zap.String("service_name", l.Configs.App.ServiceName),
@@ -23,8 +24,9 @@ func (l *ZapLogger) encodeEndpointLogForConsole(log *EndpointLog) []zap.Field {
 	}
 }
 
-func (l *ZapLogger) encodeServiceLogForConsole(log *ServiceLog) []zap.Field {
+func (l *ZapLogger) encodeServiceLogForConsole(methodLevel *string, log *ServiceLog) []zap.Field {
 	return []zap.Field{
+		zap.String("level", *l.getLevel(methodLevel, &log.Level)),
 		zap.Any("error", log.Error),
 		zap.String("service_name", l.Configs.App.ServiceName),
 		zap.String("instance_public_ip", l.Configs.App.PublicIP),
@@ -35,8 +37,9 @@ func (l *ZapLogger) encodeServiceLogForConsole(log *ServiceLog) []zap.Field {
 	}
 }
 
-func (l *ZapLogger) getEndpointLogBody(log *EndpointLog) []interface{} {
+func (l *ZapLogger) getEndpointLogBody(methodLevel *string, log *EndpointLog) []interface{} {
 	return []interface{}{
+		"level", l.getLevel(methodLevel, &log.Level),
 		"url", log.Url,
 		"error", log.Error,
 		"service_name", l.Configs.App.ServiceName,
@@ -66,8 +69,16 @@ func (l *ZapLogger) getTimestamp(t *time.Time) *time.Time {
 	return t
 }
 
-func (l *ZapLogger) getServiceLogBody(log *ServiceLog) []interface{} {
+func (l *ZapLogger) getLevel(methodLevel *string, level *string) *string {
+	if level != nil && StringPtr(level) != "" {
+		return level
+	}
+	return methodLevel
+}
+
+func (l *ZapLogger) getServiceLogBody(methodLevel *string, log *ServiceLog) []interface{} {
 	return []interface{}{
+		"level", l.getLevel(methodLevel, &log.Level),
 		"error", log.Error,
 		"service_name", l.Configs.App.ServiceName,
 		"instance_public_ip", l.Configs.App.PublicIP,
@@ -83,13 +94,13 @@ func (l *ZapLogger) PanicEndpoint(log *EndpointLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Panicw(StringPtr(log.Msg),
-			l.getEndpointLogBody(log)...,
+			l.getEndpointLogBody(String("panic"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Panic(
 			StringPtr(log.Msg),
-			l.encodeEndpointLogForConsole(log)...,
+			l.encodeEndpointLogForConsole(String("panic"), log)...,
 		)
 	}
 }
@@ -99,13 +110,13 @@ func (l *ZapLogger) PanicService(log *ServiceLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Panicw(StringPtr(log.Msg),
-			l.getServiceLogBody(log)...,
+			l.getServiceLogBody(String("panic"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Panic(
 			StringPtr(log.Msg),
-			l.encodeServiceLogForConsole(log)...,
+			l.encodeServiceLogForConsole(String("panic"), log)...,
 		)
 	}
 }
@@ -115,12 +126,12 @@ func (l *ZapLogger) InfoEndpoint(log *EndpointLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Infow(StringPtr(log.Msg),
-			l.getEndpointLogBody(log)...,
+			l.getEndpointLogBody(String("info"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Info(StringPtr(log.Msg),
-			l.encodeEndpointLogForConsole(log)...,
+			l.encodeEndpointLogForConsole(String("info"), log)...,
 		)
 	}
 }
@@ -130,12 +141,12 @@ func (l *ZapLogger) InfoService(log *ServiceLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Infow(StringPtr(log.Msg),
-			l.getServiceLogBody(log)...,
+			l.getServiceLogBody(String("info"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Info(StringPtr(log.Msg),
-			l.encodeServiceLogForConsole(log)...,
+			l.encodeServiceLogForConsole(String("info"), log)...,
 		)
 	}
 }
@@ -145,12 +156,12 @@ func (l *ZapLogger) WarnEndpoint(log *EndpointLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Warnw(StringPtr(log.Msg),
-			l.getEndpointLogBody(log)...,
+			l.getEndpointLogBody(String("warn"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Warn(StringPtr(log.Msg),
-			l.encodeEndpointLogForConsole(log)...,
+			l.encodeEndpointLogForConsole(String("warn"), log)...,
 		)
 	}
 }
@@ -160,12 +171,12 @@ func (l *ZapLogger) WarnService(log *ServiceLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Warnw(StringPtr(log.Msg),
-			l.getServiceLogBody(log)...,
+			l.getServiceLogBody(String("warn"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Warn(StringPtr(log.Msg),
-			l.encodeServiceLogForConsole(log)...,
+			l.encodeServiceLogForConsole(String("warn"), log)...,
 		)
 	}
 }
@@ -175,12 +186,13 @@ func (l *ZapLogger) ErrorEndpoint(log *EndpointLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Errorw(StringPtr(log.Msg),
-			l.getEndpointLogBody(log)...,
+			l.getEndpointLogBody(String("error"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
+		ll := l.encodeEndpointLogForConsole(String("error"), log)
 		l.loggerConsole.Error(StringPtr(log.Msg),
-			l.encodeEndpointLogForConsole(log)...,
+			ll...,
 		)
 	}
 }
@@ -190,12 +202,12 @@ func (l *ZapLogger) ErrorService(log *ServiceLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Errorw(StringPtr(log.Msg),
-			l.getServiceLogBody(log)...,
+			l.getServiceLogBody(String("error"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Error(StringPtr(log.Msg),
-			l.encodeServiceLogForConsole(log)...,
+			l.encodeServiceLogForConsole(String("error"), log)...,
 		)
 	}
 }
@@ -205,12 +217,12 @@ func (l *ZapLogger) FatalEndpoint(log *EndpointLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Fatalw(StringPtr(log.Msg),
-			l.getEndpointLogBody(log)...,
+			l.getEndpointLogBody(String("fatal"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Fatal(StringPtr(log.Msg),
-			l.encodeEndpointLogForConsole(log)...,
+			l.encodeEndpointLogForConsole(String("fatal"), log)...,
 		)
 	}
 }
@@ -220,12 +232,12 @@ func (l *ZapLogger) FatalService(log *ServiceLog) {
 	log.errorType = &t
 	if l.loggerJson != nil {
 		l.loggerJson.Fatalw(StringPtr(log.Msg),
-			l.getServiceLogBody(log)...,
+			l.getServiceLogBody(String("fatal"), log)...,
 		)
 	}
 	if l.loggerConsole != nil {
 		l.loggerConsole.Fatal(StringPtr(log.Msg),
-			l.encodeServiceLogForConsole(log)...,
+			l.encodeServiceLogForConsole(String("fatal"), log)...,
 		)
 	}
 }

@@ -16,23 +16,24 @@ type ElasticPlugin struct {
 	logger Logger
 }
 
-func (e *ElasticPlugin) Connect(hosts []string) (err error) {
+func (e *ElasticPlugin) Connect(logger Logger) (err error) {
+	e.logger = logger
 	e.Client, err = elastic.NewClient(
 		elastic.SetSniff(false),
 		//elastic.SetSniff(global_helpers.BoolPtr(configs.Conf.ElasticSearch.Sniff)),
 		//elastic.SetSnifferInterval(time.Minute * 5),
-		elastic.SetURL(strings.Join(hosts, ", ")),
+		elastic.SetURL(strings.Join(e.logger.GetConfigs().Storage.Hosts, ", ")),
 		elastic.SetHealthcheckInterval(10*time.Second),
 		elastic.SetErrorLog(log.New(os.Stderr, "[ELASTIC ERROR] ", log.LstdFlags)),
 		elastic.SetInfoLog(log.New(os.Stdout, "[ELASTIC INFO] ", log.LstdFlags)),
-		elastic.SetTraceLog(log.New(os.Stderr, "[ELASTIC TRACE] ", log.LstdFlags)),
+		//elastic.SetTraceLog(log.New(os.Stderr, "[ELASTIC TRACE] ", log.LstdFlags)),
 		elastic.SetGzip(true),
 	)
 	if err != nil {
 		return err
 	}
 	// Ping the ElasticSearch server to get e.g. the version number
-	info, code, err := e.Client.Ping(hosts[0]).Do(context.Background())
+	info, code, err := e.Client.Ping(e.logger.GetConfigs().Storage.Hosts[0]).Do(context.Background())
 	if err != nil {
 		return err
 	}
@@ -43,8 +44,13 @@ func (e *ElasticPlugin) Connect(hosts []string) (err error) {
 	return nil
 }
 
-func (e *ElasticPlugin) Ping() {
-
+// Ping the ElasticSearch server
+func (e *ElasticPlugin) Ping(ctx context.Context) bool {
+	_, code, err := e.Client.Ping(e.logger.GetConfigs().Storage.Hosts[0]).Do(ctx)
+	if err != nil || code > 220 || code < 200 {
+		return false
+	}
+	return true
 }
 
 func (e *ElasticPlugin) Close() {
@@ -105,6 +111,9 @@ func (e *ElasticPlugin) SetServiceLogsMap() error {
       }
    },
    "mappings":{
+	"_source": {
+		"excludes": ["error_type"]
+	},
       "properties":{
          "level":{
             "type":"keyword"
@@ -153,7 +162,12 @@ func (e *ElasticPlugin) SetServiceLogsMap() error {
                }
             },
             "analyzer":"rebuilt_whitespace"
-         }
+		 },
+		 "error_type": {
+			"type": "object",
+			"enabled": false,
+			"include_in_all": false
+		 }
       }
    }
 }
@@ -208,6 +222,9 @@ func (e *ElasticPlugin) SetEndpointsLogsMap() error {
       }
    },
    "mappings":{
+	"_source": {
+		"excludes": ["error_type"]
+	},
       "properties":{
          "level":{
             "type":"keyword"
@@ -271,7 +288,12 @@ func (e *ElasticPlugin) SetEndpointsLogsMap() error {
          },
          "duration":{
             "type":"long"
-         }
+		 },
+		 "error_type": {
+			"type": "object",
+			"enabled": false,
+			"include_in_all": false
+		 }
       }
    }
 }

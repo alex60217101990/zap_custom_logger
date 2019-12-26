@@ -16,7 +16,9 @@ type ZapLogger struct {
 	loggerConsole *zap.Logger
 	Configs       *Configs
 	ctx           context.Context
-	writeStream   io.Writer
+	writeStdErr   *io.PipeWriter
+	writeStdOut   *io.PipeWriter
+	syncService   SyncService
 }
 
 func NewZapLogger(options ...func(*ZapLogger) error) *ZapLogger {
@@ -33,9 +35,6 @@ func NewZapLogger(options ...func(*ZapLogger) error) *ZapLogger {
 	if logger.ctx == nil {
 		logger.ctx = context.Background()
 	}
-	if logger.writeStream == nil {
-		logger.Configs.App.LoggerStorage = Default
-	}
 	if len(logger.Configs.App.PublicIP) == 0 {
 		logger.Configs.App.PublicIP = "localhost"
 	}
@@ -49,14 +48,11 @@ func NewZapLogger(options ...func(*ZapLogger) error) *ZapLogger {
 }
 
 func (l *ZapLogger) Connect() {
-	if l.Configs.App.LoggerStorage != Default && l.writeStream == nil {
-		log.Fatal("invalid count of io.Write streams for log data synchronization", string(debug.Stack()))
-	}
 	highPriority := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
-		return level >= zapcore.WarnLevel
+		return level >= zapcore.ErrorLevel //zapcore.WarnLevel
 	})
 	lowPriority := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
-		return level < zapcore.WarnLevel
+		return level < zapcore.ErrorLevel //zapcore.WarnLevel
 	})
 	// add stack tracing
 	var stackOptions []zap.Option
@@ -77,10 +73,11 @@ func (l *ZapLogger) Connect() {
 
 	consoleEncoderDebug := zapcore.NewConsoleEncoder(config)
 	consoleEncoderProd := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-	consoleDebugging := zapcore.Lock(os.Stdout)
-	consoleErrors := zapcore.Lock(os.Stderr)
 
-	if l.Configs.App.LoggerStorage == Default {
+	consoleDebugging := zapcore.AddSync(os.Stderr)
+	consoleErrors := zapcore.AddSync(os.Stdout)
+
+	if l.Configs.Storage.LoggerStorage == Default {
 		if l.Configs.Encoder == Console {
 			core = zapcore.NewTee(
 				zapcore.NewCore(consoleEncoderDebug, consoleErrors, highPriority),
@@ -93,21 +90,32 @@ func (l *ZapLogger) Connect() {
 			)
 		}
 	} else {
-		topicLogsHigh := zapcore.AddSync(l.writeStream)
+		var readStdErr *io.PipeReader
+		var readStdOut *io.PipeReader
+		readStdErr, l.writeStdErr = io.Pipe()
+		readStdOut, l.writeStdOut = io.Pipe()
+		syncService := NewSyncLogsService(l.ctx, l, readStdOut, readStdErr)
+
+		topicLogsHigh := zapcore.AddSync(l.writeStdErr)
+		topicLogsLow := zapcore.AddSync(l.writeStdOut)
+
 		indexEngineEncoder := zapcore.NewJSONEncoder(encoderCfg)
 		if l.Configs.Encoder == Console {
 			core = zapcore.NewTee(
 				zapcore.NewCore(consoleEncoderDebug, consoleErrors, lowPriority),
 				zapcore.NewCore(consoleEncoderDebug, consoleDebugging, highPriority),
 				zapcore.NewCore(indexEngineEncoder, topicLogsHigh, highPriority),
+				zapcore.NewCore(indexEngineEncoder, topicLogsLow, lowPriority),
 			)
 		} else {
 			core = zapcore.NewTee(
 				zapcore.NewCore(consoleEncoderProd, consoleErrors, lowPriority),
 				zapcore.NewCore(consoleEncoderProd, consoleDebugging, highPriority),
 				zapcore.NewCore(indexEngineEncoder, topicLogsHigh, highPriority),
+				zapcore.NewCore(indexEngineEncoder, topicLogsLow, lowPriority),
 			)
 		}
+		syncService.RunLogsLoops()
 	}
 
 	if l.Configs.Encoder == Console {
@@ -122,16 +130,28 @@ func (l *ZapLogger) GetConfigs() *Configs {
 }
 
 func (l *ZapLogger) Close() {
+	var err error
 	if l.loggerJson != nil {
-		if err := l.loggerJson.Sync(); err != nil {
+		if err = l.loggerJson.Sync(); err != nil {
 			log.Printf("cancel zap logger error: %v", err)
+			err = nil
 		}
 	}
 	if l.loggerConsole != nil {
-		if err := l.loggerConsole.Sync(); err != nil {
+		if err = l.loggerConsole.Sync(); err != nil {
 			log.Printf("cancel zap logger error: %v", err)
+			err = nil
 		}
 	}
+	err = l.writeStdErr.Close()
+	if err != nil {
+		log.Printf("cancel zap logger error: %v", err)
+	}
+	err = l.writeStdOut.Close()
+	if err != nil {
+		log.Printf("cancel zap logger error: %v", err)
+	}
+	l.syncService.Close()
 }
 
 func SetConfigs(conf *Configs) func(*ZapLogger) error {
@@ -144,13 +164,6 @@ func SetConfigs(conf *Configs) func(*ZapLogger) error {
 func SetContext(ctx context.Context) func(*ZapLogger) error {
 	return func(logger *ZapLogger) error {
 		logger.ctx = ctx
-		return nil
-	}
-}
-
-func SetWriter(writer io.Writer) func(*ZapLogger) error {
-	return func(logger *ZapLogger) error {
-		logger.writeStream = writer
 		return nil
 	}
 }
