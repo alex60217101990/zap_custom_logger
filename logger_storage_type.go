@@ -1,4 +1,4 @@
-package enums
+package zap_custom_logger
 
 var (
 	logStorageTypeRelations map[string]LogStorageType
@@ -8,7 +8,7 @@ type LogStorageType int
 
 const (
 	Default LogStorageType = iota
-	Elastic 
+	Elastic
 	Loki
 )
 
@@ -25,10 +25,10 @@ func (t LogStorageType) String() string {
 	if t < Default || t > Loki {
 		return "unknown logger storage type"
 	}
-	return names[t-1]
+	return names[t]
 }
 
-func FromStrConvert(t string) *LogStorageType {
+func LogStorageFromStrConvert(t string) *LogStorageType {
 	if result, ok := logStorageTypeRelations[t]; ok {
 		return &result
 	}
