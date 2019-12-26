@@ -1,14 +1,19 @@
 package zap_custom_logger
 
 type Configs struct {
-	App App
+	App     App
 	Encoder EncoderType
+	Storage Storage
 }
 
 type App struct {
-	LoggerStorage LogStorageType
-	PublicIP string
-	Version string
+	PublicIP    string
+	Version     string
 	ServiceName string
-	Namespace string
+	Namespace   string
+}
+
+type Storage struct {
+	LoggerStorage LogStorageType
+	Hosts         []string
 }

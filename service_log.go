@@ -60,7 +60,7 @@ func (e *ServiceLog) UnmarshalJSON(data []byte) (err error) {
 			if errorType == 0 {
 				return fmt.Errorf("invalid 'error_type' field value")
 			}
-			e.errorType.ConvertFromFloat64(errorType)
+			e.errorType = ConvertErrTypeFromFloat64(errorType)
 		}
 		if errorType, ok := tmp.(string); ok {
 			e.errorType = e.errorType.FromStrConvert(errorType)
