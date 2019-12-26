@@ -5,7 +5,7 @@
 Run command on you [$GOPATH/src] path:
 
 ```bash
-go get -u github.com/alex60217101990/nats_utils
+go get -u github.com/alex60217101990/zap_custom_logger
 ```
 
 If you use: ```bash 
