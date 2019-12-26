@@ -1,4 +1,4 @@
-# nats_utils
+# ZAP custom logger
 
 ## Installation
 
