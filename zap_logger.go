@@ -130,7 +130,10 @@ func (l *ZapLogger) GetConfigs() *Configs {
 }
 
 func (l *ZapLogger) Ping(ctx context.Context) bool {
-	return l.syncService.Ping(ctx)
+	if l.syncService != nil {
+		return l.syncService.Ping(ctx)
+	}
+	return false
 }
 
 func (l *ZapLogger) Close() {
@@ -147,15 +150,21 @@ func (l *ZapLogger) Close() {
 			err = nil
 		}
 	}
-	err = l.writeStdErr.Close()
-	if err != nil {
-		log.Printf("cancel zap logger error: %v", err)
+	if l.writeStdErr != nil {
+		err = l.writeStdErr.Close()
+		if err != nil {
+			log.Printf("cancel zap logger error: %v", err)
+		}
 	}
-	err = l.writeStdOut.Close()
-	if err != nil {
-		log.Printf("cancel zap logger error: %v", err)
+	if l.writeStdOut != nil {
+		err = l.writeStdOut.Close()
+		if err != nil {
+			log.Printf("cancel zap logger error: %v", err)
+		}
 	}
-	l.syncService.Close()
+	if l.syncService != nil {
+		l.syncService.Close()
+	}
 }
 
 func SetConfigs(conf *Configs) func(*ZapLogger) error {

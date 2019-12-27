@@ -47,15 +47,20 @@ func NewSyncLogsService(ctx context.Context, logger Logger, readers ...*io.PipeR
 }
 
 func (s *SyncLogsService) Close() {
+	var err error
 	s.plugin.Close()
-	err := s.readerStd.Close()
-	if err != nil {
-		log.Printf("cancel sync plugin error: %#v, stack: %s", err, debug.Stack())
-		err = nil
+	if s.readerStd != nil {
+		err = s.readerStd.Close()
+		if err != nil {
+			log.Printf("cancel sync plugin error: %#v, stack: %s", err, debug.Stack())
+			err = nil
+		}
 	}
-	err = s.readerStd.Close()
-	if err != nil {
-		log.Printf("cancel sync plugin error: %#v, stack: %s", err, debug.Stack())
+	if s.readerErr != nil {
+		err = s.readerErr.Close()
+		if err != nil {
+			log.Printf("cancel sync plugin error: %#v, stack: %s", err, debug.Stack())
+		}
 	}
 }
 

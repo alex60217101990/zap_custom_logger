@@ -8,7 +8,8 @@ import (
 
 func TestConnect(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	log := NewZapLogger(
+	var log Logger
+	log = NewZapLogger(
 		SetConfigs(&Configs{
 			App: App{
 				PublicIP: "127.0.0.1",
