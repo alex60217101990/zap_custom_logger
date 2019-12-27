@@ -11,6 +11,7 @@ import (
 type SyncService interface {
 	Close()
 	RunLogsLoops()
+	Ping(context.Context) bool
 }
 
 type SyncLogsService struct {
@@ -112,6 +113,10 @@ func (s *SyncLogsService) stdOutReadLoop() {
 			}
 		}
 	}()
+}
+
+func (s *SyncLogsService) Ping(ctx context.Context) bool {
+	return s.plugin.Ping(ctx)
 }
 
 func (s *SyncLogsService) decodeEndpointLogHelper(dec *json.Decoder, endpointLog *EndpointLog) (err error) {

@@ -129,6 +129,10 @@ func (l *ZapLogger) GetConfigs() *Configs {
 	return l.Configs
 }
 
+func (l *ZapLogger) Ping(ctx context.Context) bool {
+	return l.syncService.Ping(ctx)
+}
+
 func (l *ZapLogger) Close() {
 	var err error
 	if l.loggerJson != nil {

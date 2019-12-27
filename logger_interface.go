@@ -1,7 +1,10 @@
 package zap_custom_logger
 
+import "context"
+
 type Logger interface {
 	GetConfigs() *Configs
+	Ping(context.Context) bool
 	Connect()
 	Close()
 	// methods
