@@ -122,6 +122,7 @@ func (l *ZapLogger) Connect() {
 			)
 		}
 		syncService.RunLogsLoops()
+		l.syncService = syncService
 	}
 
 	if l.Configs.Encoder == Console {
