@@ -137,6 +137,15 @@ func (l *ZapLogger) Ping(ctx context.Context) bool {
 	return false
 }
 
+func (l *ZapLogger) GetZapNativeLogger() *zap.Logger {
+	if l.loggerJson != nil {
+		return l.loggerJson.Desugar()
+	} else if l.loggerConsole != nil {
+		return l.loggerConsole
+	}
+	return nil
+}
+
 func (l *ZapLogger) Close() {
 	var err error
 	if l.loggerJson != nil {
